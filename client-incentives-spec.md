@@ -1,5 +1,7 @@
 # Client Incentives V1 spec
 
+**Note: this is still work in progress**
+
 The following protocol functions will earn the facilitating clients rewards:
 
 1. Creating proposals
@@ -164,7 +166,7 @@ In order to reduce risk, the contract will not have access to the main treasury.
 Several new data points will saved in the _Proposal_ struct:
 
 1. _createdClientId_: the clientId which facilitated _propose _/ _proposeBySigs_
-2. \_votesPerClientId: \_a mapping which will hold the number of votes cast by each client on a specific proposal
+2. _votesPerClientId_: a mapping which will hold the number of votes cast by each client on a specific proposal
 3. _createdTimestamp_: timestamp of the block in which the proposal was created
 
 ##### Gas cost differences
