@@ -19,14 +19,16 @@ All of the functions mentioned above will have a `clientId` parameter which iden
 
 - Anyone can register themselves as a client and get a clientId.
 - To register, one must mint a NounsClient NFT.
-- Whoever holds that NFT will have permission to claim rewards for that client.
-- The NFT owner may optionally associate a URL with their NFT to identify themselves.
-- The NFT art is undetermined at this stage, but will have the option to be updated after launch.
+- For a client to withdraw their rewards they need:
+   1. To hold the client NFT with the relevant ID, and
+   2. For their client ID to be approved by the DAO.
+- The client NFT owner can update their token metadata, including their display name and URL.
+- The client NFT is launching with basic art thanks to krel, and the DAO has the option to update it at a later time.
 
 We chose to use clientId instead of simply wallet addresses for a few reasons:
 
-- Requires less bits for storage
-- Allows the client to change their managing address without creating a new client entity
+- Requires less bits for storage.
+- Allows the client to change their managing address without creating a new client entity.
 
 ## Rewards
 
