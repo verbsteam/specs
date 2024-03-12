@@ -1,7 +1,5 @@
 # Client Incentives V1 spec
 
-**Note: this is still work in progress**
-
 The following protocol functions will earn the facilitating clients rewards:
 
 1. Creating proposals
@@ -18,34 +16,48 @@ All of the functions mentioned above will have a `clientId` parameter which iden
 ## Clients IDs
 
 - Anyone can register themselves as a client and get a clientId.
-- To register, one must mint a NounsClient NFT.
-- Whoever holds that NFT will have permission to claim rewards for that client.
-- The NFT owner may optionally associate a URL with their NFT to identify themselves.
-- The NFT art is undetermined at this stage, but will have the option to be updated after launch.
+- To register, one must mint a Nouns Client NFT.
+- For a client to withdraw their rewards they need:
+  1.  To hold the client NFT with the relevant ID, and
+  2.  For their client ID to be approved by the DAO.
+- The NFT owner may optionally associate a name and description with their NFT to identify themselves.
+- The client NFT is launching with basic art thanks to krel, and the DAO has the option to update it at a later time.
 
 We chose to use clientId instead of simply wallet addresses for a few reasons:
 
-- Requires less bits for storage
-- Allows the client to change their managing address without creating a new client entity
+- Requires less bits for storage.
+- Allows the client to change their managing address without creating a new client entity.
 
 ## Rewards
 
-All rewards will be calculated as a % of the DAO’s auction revenue.
+All rewards will be calculated as a % of the DAO’s auctions revenue.
 
 The benefits we see in using a % of revenue are:
 
-- Incentive alignment between clients and the dao for auction revenue to increase
-- Easier to budget a % of income than pay-per-use which is less predictable
+- Incentive alignment between clients and the dao for auction revenue to increase.
+- Easier to budget a % of income than pay-per-use which is less predictable.
+
+### DAO Approval
+
+A client may only claim rewards after the DAO has approved their clientId to withdraw rewards. The DAO approves clients
+via a DAO proposal to call `Rewards.setClientApproval`.
+DAO approval is required in order to avoid DAO members to collect rewards for their own actions.
+
+### Admin account
+
+An admin wallet is given permission to pause & unpause the contract. This is in case the Rewards contract is somehow abused.
 
 ### Bidding on auctions (only winning bid)
 
-The client which facilitates the _winning_ bid of an auction, is entitled to a % of that auction’s settled ETH.
+The client which facilitates the _winning_ bid of an auction, is entitled to a % (in bips) of that auction’s settled ETH.
 
 The % to use is a parameter adjustable by the DAO.
 
 Example:
 
-If the % is set to be 1%, and the winning bid was 15 ETH, then the client which facilitated the bid can claim 0.15 ETH.
+If the % is set to be 100 bips, and the winning bid was 15 ETH, then the client which facilitated the bid can claim 0.15 ETH.
+
+This parameter is named `auctionRewardBps` in the contract.
 
 ### Creating & voting on proposals
 
@@ -53,22 +65,22 @@ Rewards for proposals are defined as a % of auction revenue in a certain period 
 
 2 parameters are configured:
 
-1. _percentRewardProposals_: % of auction revenue for writing proposals
-2. _percentRewardProposalVotes_: % of auction revenue for votes
+1. `proposalRewardBps`: bips of auction revenue for creating proposals
+2. `votingRewardBps`: bips of auction revenue for casting votes
 
 To ensure the rewards aren’t skewed by too little data when calculating rewards, we require the time period to be either:
 
-- At least 1 proposal and at least 2 weeks long (configurable param)
+- At least 1 proposal and at least 2 weeks long (configurable param: `minimumRewardPeriod`).
 
   OR
 
-- Have at least 10 (configurable param) proposals created in that period
+- Have at least 5 (configurable param: `numProposalsEnoughForReward`) proposals created in that period.
 
-When calling the contract to calculate rewards, the caller passes the last proposal id to reward which is used to mark the end of the period. The start of the period is marked by the proposal id passed in the previous invocation. In both cases, the proposal creation time is used.
+When calling the contract to calculate rewards (`updateRewardsForProposalWritingAndVoting`), the caller passes the last proposal id to reward which is used to mark the end of the period. The start of the period is marked by the proposal id passed in the previous invocation. In both cases, the proposal creation time is used.
 
 To not incentivize spam proposals, a proposal is eligible for rewards only if:
 
-- Voting has ended, and at least 10% (configurable param) of total supply voted For
+- Voting has ended, and at least 10% (configurable param: `proposalEligibilityQuorumBps`) of total supply voted For
   - This is separate from the DAO’s quorum parameters. The separation is mostly to avoid gas costs of reading the dynamic-quorum parameters for each proposal.
 
 Rewards for voting are split between all the clients which facilitated voting, weighted by the numbers of votes cast.
@@ -76,8 +88,8 @@ Rewards for voting are split between all the clients which facilitated voting, w
 Example:
 
 - During a 2 week period, the auction revenue was 210 ETH.
-- _percentRewardProposals_ is set to 2% = 4.2 ETH
-- _percentRewardProposalVotes_ is set to 1% = 2.1 ETH
+- `proposalRewardBps` is set to 200 bips = 4.2 ETH
+- `votingRewardBps` is set to 100 = 2.1 ETH
 
 During that period 3 proposals were created:
 
@@ -102,16 +114,16 @@ There were a total of 120 votes cast in proposals 100 & 101:
 
 ### Configurable params
 
-- _auctionRewardBps_: bips of auction revenue rewarding auction bidding
-- _proposalsRewardBps_: bips of auction revenue for rewarding writing proposals
-- _proposalVotesRewardBps_: bips of auction revenue for rewarding votes
-- _proposalsRewardMinimumTimePeriod_: time periods longer than this are sufficient for calculating proposals rewards
-- _proposalsRewardMinimumNumProposals_: this number of proposals is sufficient for calculating proposals rewards
-- _minimumProposalQuorumForRewardBps_: bips of For votes out of total supply required for a proposal to be eligible for rewards
+- `auctionRewardBps`: bips of auction revenue rewarding auction bidding
+- `proposalRewardBps`: bips of auction revenue for rewarding writing proposals
+- `votingRewardBps`: bips of auction revenue for rewarding votes
+- `minimumRewardPeriod`: time periods longer than this are sufficient for calculating proposals rewards
+- `numProposalsEnoughForReward`: this number of proposals is sufficient for calculating proposals rewards
+- `proposalEligibilityQuorumBps`: bips of For votes out of total supply required for a proposal to be eligible for rewards
 
 ## Technical design
 
-A side contract called _NounsClientIncentives_ will be responsible for distributing rewards.
+A side contract called `Rewards` will be responsible for distributing rewards.
 
 In order to reduce risk, the contract will not have access to the main treasury. Instead, the DAO will fund this contract with WETH via proposal. This also has the benefit of easier upgrades, since we don’t need to do big audits for high risk changes. If this becomes a core part of the protocol, we may consider tighter integration in the future.
 
@@ -119,12 +131,9 @@ In order to reduce risk, the contract will not have access to the main treasury.
 
 #### NounsAuctionHouse
 
-1. The auction house contract will be upgraded to [NounsAuctionHouseV2](https://github.com/nounsDAO/nouns-monorepo/pull/799) which maintains a historic price feed in the contract’s storage.
-   1. This will enable _NounsClientIncentives_ to query the auction revenue during a specific period or a specific auction
-2. _getClientIdOfWinningBid(uint256 nounId)_:
-
-- Returns the clientId of the winning bid for a specific nounId
-- The clientId will need to be added to the historic price feed saved in storage
+1. The auction house contract will be upgraded to `NounsAuctionHouseV2` which maintains a historic price feed in the contract’s storage.
+   1. This will enable `Rewards` to query the auction revenue during a specific period or a specific auction.
+   2. An additional `createBid` function will be added with a `clientId` parameter which will also be saved in the historic price data.
 
 ##### Gas cost differences
 
@@ -161,13 +170,13 @@ In order to reduce risk, the contract will not have access to the main treasury.
   </tr>
 </table>
 
-#### NounsDAOLogicV3
+#### NounsDAOLogic
 
 Several new data points will saved in the _Proposal_ struct:
 
-1. _createdClientId_: the clientId which facilitated _propose _/ _proposeBySigs_
-2. _votesPerClientId_: a mapping which will hold the number of votes cast by each client on a specific proposal
-3. _createdTimestamp_: timestamp of the block in which the proposal was created
+1. `clientId`: the clientId which facilitated `propose` / `proposeBySigs`.
+2. `voteClients`: a mapping which will hold the number of votes cast by each client on a specific proposal.
+3. `creationTimestamp`: timestamp of the block in which the proposal was created
 
 ##### Gas cost differences
 
@@ -178,61 +187,132 @@ Several new data points will saved in the _Proposal_ struct:
 - castRefundableVote(WithReason)
   - +20K gas for the first time voting from a specific clientId, +5K gas when the clientId has already been used to vote for this proposal.
 
-### NounsClientIncentives contract
+### Rewards contract
 
 The contract will use WETH by default to pay clients. We decided to use WETH in order to have the flexibility to switch to Lido’s stETH token for example.
 
-_setERC20Address(address token)_
+#### Public write functions
 
-- Changes the ERC20 contract used for withdrawing balances
-- Only owner (nouns dao) can call this
-- Assumes the token is pegged 1:1 to ETH and has 18 decimals
+```solidity
+function registerClient(string calldata name, string calldata description) external whenNotPaused returns (uint32)
+```
 
-_withdraw(address token, uint256 amount, address to)_
+- Mints a new NounsClient NFT. `name` and `description` are used to identify the client.
+- The id of the NFT is used as the clientId.
+  - ID space is limited to uint32 in order to reduce storage space required in the core DAO contracts, but still large enough that it is unreasonable that it will be entirely consumed.
+- Anyone can call this function.
 
-- Allow the owner (nouns dao) to withdraw `token` tokens from the contract
+```solidity
+function updateClientMetadata(uint32 tokenId, string calldata name, string calldata description) external
+```
 
-_withdrawClientBalance(uint32 clientId, uint256 amount, address to)_
+- Updates a client's `name` & `description`.
+- Only the owner of the NFT can call this.
 
-- Withdraw token balance and decrease the balance of clientId
-- Can be called only by the owner of NFT with id = clientId
-- Can be paused & unpaused by an admin account (e.g. verbs team)
+```solidity
+function updateRewardsForAuctions(uint32 lastNounId) public whenNotPaused
+```
 
-_updateRewardsForAuctions(uint256 lastNounId)_
+- Distribute rewards for auction bidding since the last update until auction with id `lastNounId`.
+- If an auction's winning bid was called with a clientId, that client will be reward with `params.auctionRewardBps` bips of the auction's settlement amount.
+- At least `minimumAuctionsBetweenUpdates` must happen between updates.
+- Gas spent is refunded in `ethToken` (WETH by default).
+- Gas is refunded only if at least one auction was rewarded.
 
-- Updates the balance of clientIds which facilitated auctions since the last invocation up to `lastNounId`
-- `lastNounId` must be a settled auction
-- Can be paused & unpaused by an admin account (e.g. verbs team)
-- Gas used for calling this function will be refunded. Because calling this function can benefit multiple clients, the gas is refunded to not make one client take the cost.
-  - If the contract’s balance is empty, gas will not be refunded.
+```solidity
+function updateRewardsForProposalWritingAndVoting(
+        uint32 lastProposalId,
+        uint32[] calldata votingClientIds
+    ) public whenNotPaused
+```
 
-_fastforwardLastAuctionId(uint256 nounId)_
+- Distribute rewards for proposal creation and voting from the last update until `lastProposalId`.
+- A proposal is eligible for rewards if for-votes/total-votes >= params.proposalEligibilityQuorumBps.
+- Rewards are calculated by the auctions revenue during the period between the creation time of last proposal in the previous update until the current last proposal with id `lastProposalId`.
+- Gas spent is refunded in `ethToken`.
+- `lastProposalId` id of the last proposal to include in the rewards distribution. all proposals up to and including this id must have ended voting.
+- `votingClientIds` votingClientIds array of sorted client ids that were used to vote on the eligible proposals in this rewards distribution. reverts if contains duplicates. reverts if not sorted. reverts if a clientId had zero votes. You may use `getVotingClientIds` as a convenience function to get the correct `votingClientIds`.
 
-- Can be called by an admin account (e.g. verbs team)
-- Advances the last auction nounId to `nounId`
-- This is used in case many auctions have been been settled without a clientId, e.g. while auctions are still on nouns.wtf
-- `nounId` must be larger than the currently registered `lastAuctionId`
-- `nounId` must be a settled auction
+```solidity
+function withdrawClientBalance(uint32 clientId, address to, uint96 amount) public whenNotPaused
+```
 
-_updateRewardsForProposalWritingAndVoting(uint256 lastProposalId)_
+- Withdraws the balance of a client
+- The caller must be the owner of the NFT with id `clientId` and the client must be approved by the DAO.
 
-- Updates the rewards for all unprocessed proposals up to and including _lastProposalId_
-- All proposals included must be done with voting
-- Can be paused & unpaused by an admin account (e.g. verbs team)
-- Gas used for calling this function will be refunded. Because calling this function can benefit multiple clients, the gas is refunded to not make one client take the cost.
-  - If the contract’s balance is empty, gas will not be refunded.
+#### Public read functions
 
-### NounsClient contract
+```solidity
+function clientBalance(uint32 clientId) public view returns (uint96)
+```
 
-An ERC721 used to identify a client.
+- Returns the withdrawable balance of client with id `clientId`.
 
-_registerClient()_
+```solidity
+function getVotingClientIds(uint32 lastProposalId) public view returns (uint32[] memory)
+```
 
-- Mints a new NounsClient
-- The id of the NFT is used as the clientId
-- ID space is limited to uint32 in order to reduce storage space required in the core DAO contracts, but still large enough that it is unreasonable that it will be entirely consumed.
+- Returns the clientIds that are needed to be passed as a parameter to `updateRewardsForProposalWritingAndVoting`.
+- This is not meant to be called onchain because it may be very gas intensive.
 
-_addClientDescription(uint32 clientId, string description)_
+```solidity
+function getAuctionRevenue(
+        uint256 firstNounId,
+        uint256 endTimestamp
+    ) public view returns (uint256 sumRevenue, uint256 lastAuctionId)
+```
 
-- Set a description for the client, e.g. a website
-- Only allowed by the owner of NFT with clientId
+- Returns the sum of revenue via auctions from auctioning noun with id `firstNounId` until timestamp of `endTimestamp.
+
+#### Admin functions (only callable by the DAO)
+
+```solidity
+function setClientApproval(uint32 clientId, bool approved) public onlyOwner
+```
+
+- Set whether the client is approved to withdraw their reward balance.
+- Anyone can mint a client NFT and start earning rewards, but only approved clients can withdraw.
+- This way the DAO helps mitigate abuse.
+
+```solidity
+function setParams(RewardParams calldata newParams) public onlyOwner
+```
+
+- Update params of reward distribution.
+
+```solidity
+function setAdmin(address newAdmin) public onlyOwner
+```
+
+- Update the admin wallet which is allowed to pause/unpause the contract.
+
+```solidity
+function setETHToken(address newToken) public onlyOwner
+```
+
+- Update the ERC20 token to use for transfering rewards.
+
+```solidity
+function withdrawToken(address token, address to, uint256 amount) public onlyOwner
+```
+
+- Withdraw an `amount` of `token` to `to`.
+- Used in case of shutting down this contract or changing to a different token.
+
+```solidity
+function pause() public onlyOwnerOrAdmin
+```
+
+- Pause the contract
+
+```solidity
+function unpause() public onlyOwnerOrAdmin
+```
+
+- Unpause the contract
+
+```
+function setDescriptor(address descriptor_) public onlyOwner
+```
+
+- Update the descriptor for the NFT (for changing art).
