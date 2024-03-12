@@ -1,106 +1,83 @@
-## Proposals
+This document organizes the available functions by the following sections:
 
-```solidity
-
-// Core contract storage
-
-struct ProposalCore {
-    // See `hashProposal`
-    bytes32 proposalHash;
-    uint48 voteStart;
-    uint32 voteDuration;
-    bool executed;
-    bool canceled;
-    uint32 clientId;
-}
-
-mapping(uint proposalId => ProposalCore) proposals;
-
-/**
-* @notice Creates a new proposal
-* @param nounIds A list of noun ids that are used to create the proposals. The list must be at least `proposalThreshold` in size. The caller (msg.sender) must be the owner or delegate of the nouns.
-* These IDs must not be part of a live proposal. (TBD)
-* @param targets Target addresses for proposal calls
-* @param values Eth values for proposal calls
-* @param signatures Function signatures for proposal calls
-* @param calldatas Calldatas for proposal calls
-* @param description String description of the proposal
-* @param clientId Optional: The ID of the client that faciliated creating the proposal
-*/
-function propose(
-    uint256[] nounIds,
-    address[] targets,
-    uint256[] values,
-    string[] signatures,
-    bytes[] calldatas,
-    string description,
-    uint32 clientId
-) external returns (uint proposalId);
-
-/**
-* @notice Creates a hash of the proposal actions & nounIds. Its purpose is to reduce the amount of data needed to be saved onchain.
-* The hash is:
-* keccak256(
-*     proposalId,
-*     keccak256(nounIds),
-*     keccak256(targets, values, signatures, calldatas)
-* )
-*/
-function hashProposal(
-    uint256 proposalId,
-    uint256[] nounIds,
-    address[] targets,
-    uint256[] values,
-    string[] signatures,
-    bytes[] calldatas
-) external returns (bytes32) {
-    bytes32 nounIdsHash = keccak256(abi.encode(nounIds));
-    bytes32 actionsHash = keccak256(abi.encode(targets, values, signatures, calldatas))
-    return keccak256(abi.encode(proposalId, nounIdsHash, actionsHash);
-}
-
-
-/**
-* @notice Update a proposal transactions and description.
-* Only the proposer can update it, and only during the updateable period.
-* @param proposalId Proposal's id
-* @param nounIds The nounIds used to create the proposal. Need to be passed because the contract only saves the hash of the nounIds
-* @param TBD: rootHash?
-* @param targets Updated target addresses for proposal calls
-* @param values Updated eth values for proposal calls
-* @param signatures Updated function signatures for proposal calls
-* @param calldatas Updated calldatas for proposal calls
-* @param description Updated description of the proposal
-* @param updateMessage Short message to explain the update
-*/
-function updateProposal(
-        uint256 proposalId,
-        uint256[] nounIds,
-        address[] targets,
-        uint256[] values,
-        string[] signatures,
-        bytes[] calldatas,
-        string description,
-        string updateMessage
-) external {
-
-// TBD: function proposeOnTimelockV1
-
-```
-
-## Proposals by sigs
-
-TODO
-
-```
-// TODO: function proposeBySigs
-// TODO: function cancelSig
-```
+- [Delegation](#delegation)
+- [Creating proposals](#creating-proposals)
+- Updating & canceling proposals
+- Voting on proposals
+- Executing proposals
 
 ## Delegation
 
-TODO
+`NounDelegationToken` is an ERC721 used for delegating Nouns voting power. For each Noun, a NounDelegationToken (NDT) can be minted with the same id. Once an NDT is minted, it must be used instead of the original Noun when voting or creating proposals.
 
-## Voting
+The original Noun owner can always transfer or burn an NDT.
+
+Users use the following functions to change delegations:
+
+- [`setDelegationAdmin`](#setdelegationadmin)
+- [`mint`](#mint)
+- [`mintBatch`](#mintbatch)
+- [`burn`](#mint)
+- [`transferFrom`](#transferfrom)
+
+#### `setDelegationAdmin`
+
+```solidity
+function setDelegationAdmin(address delegationAdmin) external
+```
+
+Updates the delegation admin of the caller (`msg.sender`) to `delegationAdmin`.
+The delegation admin can mint, burn & transfer NDTs on behalf of the caller.
+
+For example, if wallet A owns Noun #15, and sets wallet B as its delegation admin, then wallet B can mint a NDT with id #15, burn it, or transfer it.
+
+The main usecase is for keeping Nouns in cold storage, and setting the delegation admin to a hot wallet.
+
+#### `mint`
+
+```solidity
+function mint(address to, uint256 tokenId)
+```
+
+Mints a new NDT with id of `tokenId` to the wallet of `to`.
+
+_Requirements:_
+
+- Must be called by either:
+  - The owner of Noun with id `tokenId`.
+  - The "delegationAdmin" of the owner of Noun with id `tokenId`.
+
+#### `mintBatch`
+
+```solidity
+function mintBatch(address to, uint256[] calldata tokenIds)
+```
+
+Similar to [`mint`](#mint), but performs this for all the tokenIds in `tokenIds`.
+
+#### `burn`
+
+```solidity
+function burn(uint256 tokenId)
+```
+
+Burns the NDT with id `tokenId`.
+
+_Requirements:_
+
+- Must be called by either:
+  - The owner of Noun with id `tokenId`.
+  - The "delegationAdmin" of the owner of Noun with id `tokenId`.
+  - TODO: should the NDT owner be able to burn?
+
+#### `transferFrom`
+
+```solidity
+function transferFrom(address from, address to, uint256 tokenId)
+```
+
+Similar to a regular ERC721 `transferFrom`, but in addition to the NDT owner, the original Noun owner of id `tokenId`, or their delegation admin can do transfers.
+
+## Creating proposals
 
 TODO
