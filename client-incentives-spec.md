@@ -28,6 +28,8 @@ We chose to use clientId instead of simply wallet addresses for a few reasons:
 - Requires less bits for storage.
 - Allows the client to change their managing address without creating a new client entity.
 
+ClientID 0 (zero) is reserved and means this client should not be rewarded. Interactions on nouns.wtf for example will be with clientId zero. Actions done by clientId zero will still be competing against other clients, but the rewards are kept in the rewards pool.
+
 ## Rewards
 
 All rewards will be calculated as a % of the DAO’s auctions revenue.
@@ -95,7 +97,7 @@ During that period 3 proposals were created:
 
 1. Proposal id: 100
    1. Created via clientId 1
-   2. Got 20 votes via clientId 1, 30 votes via clientId 2, and 40 votes without clientId
+   2. Got 20 votes via clientId 1, 30 votes via clientId 2, and 40 votes without clientId (same as clientId zero)
 2. Proposal id: 101
    1. Created via clientId 2
    2. Got 30 votes via clientId 1
@@ -110,7 +112,7 @@ There were a total of 120 votes cast in proposals 100 & 101:
 
 - clientId 1 cast 50 (41.6%) votes and receives 0.87 ETH
 - clientId 2 cast 30 (25%) votes and receives 0.525 ETH
-- 40 votes cast without a clientId and no reward is allocated for them
+- 40 votes cast without a clientId (or clientId zero). Their portion of the reward is kept in the pool.
 
 ### Configurable params
 
