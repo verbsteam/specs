@@ -4,7 +4,8 @@ This document organizes the available functions by the following sections:
 - [Creating proposals](#creating-proposals)
 - [Updating & canceling proposals](#updating-and-canceling-proposals)
 - Voting on proposals
-- Executing proposals
+- [Executing proposals](#executing-proposals)
+- Forking?
 
 ## Delegation
 
@@ -254,4 +255,46 @@ function updateProposalBySigs(
 - Only the proposer can update it, during the updateable period.
 - Requires the original signers to sign the update.
 
-TODO: cancel
+### TODO: cancel proposal
+
+### TODO: veto
+
+## Voting on proposals
+
+#### `castRefundableVote`
+
+```solidity
+function castRefundableVote(
+  uint256[] calldata tokenIds,
+  uint256 proposalId,
+  uint8 support,
+  uint32 clientId
+) external
+```
+
+- Casts a vote on proposal with id `proposalId`.
+- Caller must be the delegate of nouns with id `tokenIds`. If an ID has no delegate, the caller must be the owner.
+- `support is the support value for the vote. 0=against, 1=for, 2=abstain
+
+## Executing proposals
+
+#### `execute`
+
+```solidity
+function execute(
+    uint256 proposalId,
+    address[] memory targets,
+    uint256[] memory values,
+    string[] memory signatures,
+    bytes[] memory calldatas
+) external
+```
+
+Executes proposal with id `proposalId`.
+The proposal actions need to be passed because only their hash is stored onchain.
+
+The proposal must have passed voting successfully, both quorum and majority of supporting votes.
+
+The proposal can be executed after being queued for a duration after voting has ended. There is no `queue` function, a proposal automatically changes to queued state if the voting was succesful. Queue duration is defined by `queuePeriod`.
+
+Proposals can't be executed while a fork is in progress.
