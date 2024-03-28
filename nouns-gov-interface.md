@@ -1,3 +1,5 @@
+# Nouns Governor Spec
+
 This document organizes the available functions by the following sections:
 
 - [Delegation](#delegation)
