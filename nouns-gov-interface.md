@@ -101,7 +101,7 @@ Returns the proposal id of the new proposal.
 _Requirements:_
 
 - `tokenIds` must be a unique ascending array of noun IDs.
-- Caller (`msg.sender`) must be the delegate or owner of nouns with IDs `tokenIds`.
+- Caller (`msg.sender`) must be the current delegate each noun in `tokenIds`; per noun ID, if a NDT exists its owner is the current delegate, otherwise the Nouner account is the current delegate.
 - The length of `tokenIds` must be at least `proposalThreshold()`.
 
 _Difference from Gov Bravo_:
