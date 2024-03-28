@@ -286,7 +286,7 @@ function castRefundableVote(
 
 - Casts a vote on proposal with id `proposalId`.
 - Caller must the current delegate of all tokens; see [`propose`](#propose) for more information on current delegate.
-- `support is the support value for the vote. 0=against, 1=for, 2=abstain
+- `support` is the support value for the vote. 0=against, 1=for, 2=abstain
 
 #### `castRefundableVoteWithReason`
 
