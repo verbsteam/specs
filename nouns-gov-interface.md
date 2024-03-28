@@ -3,7 +3,7 @@ This document organizes the available functions by the following sections:
 - [Delegation](#delegation)
 - [Creating proposals](#creating-proposals)
 - [Updating & canceling proposals](#updating-and-canceling-proposals)
-- Voting on proposals
+- [Voting on proposals](#voting-on-proposals)
 - [Executing proposals](#executing-proposals)
 - Forking?
 
@@ -255,9 +255,21 @@ function updateProposalBySigs(
 - Only the proposer can update it, during the updateable period.
 - Requires the original signers to sign the update.
 
-### TODO: cancel proposal
+#### `cancel`
 
-### TODO: veto
+```solidity
+function cancel(uint256 proposalId) external
+```
+
+Cancels a proposal. Caller must be the proposer or a signer.
+
+#### `veto`
+
+```solidity
+function veto(uint256 proposalId) external
+```
+
+Vetoes a proposal. Caller must be the vetoer.
 
 ## Voting on proposals
 
@@ -275,6 +287,20 @@ function castRefundableVote(
 - Casts a vote on proposal with id `proposalId`.
 - Caller must be the delegate of nouns with id `tokenIds`. If an ID has no delegate, the caller must be the owner.
 - `support is the support value for the vote. 0=against, 1=for, 2=abstain
+
+#### `castRefundableVoteWithReason`
+
+```solidity
+function castRefundableVoteWithReason(
+    uint256[] calldata tokenIds,
+    uint256 proposalId,
+    uint8 support,
+    string calldata reason,
+    uint32 clientId
+) public
+```
+
+Same as `castRefundableVote` but with a text "reason" for the vote.
 
 ## Executing proposals
 
