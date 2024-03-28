@@ -152,7 +152,7 @@ function proposeBySigs(
 Create a new proposal by pooling voting power in order to pass `proposalThreshold`.
 The proposal is created by pooling the voting power of the caller, i.e. the proposer (`msg.sender`) and the signers.
 
-- `tokenIds` represent the nouns used be the caller. They must be unique and ascending. The caller must be their delegate, or if there is no delegate, the owner of the nouns.
+- `tokenIds` represent the nouns used be the caller. They must be unique and ascending. The caller must the current delegate of all tokens; see [`propose`](#propose) for more information on current delegate.
 - Signers data is provided in `proposerSignatures`:
 
 ```solidity
