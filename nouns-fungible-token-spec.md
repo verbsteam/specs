@@ -31,6 +31,8 @@ Q: maybe mention that we plan the DAO to call this function via a proposal?
 
 A UUPS upgradeable ERC20 token contract that supports depositing or redeeming ERC721 tokens of a specific token, in exchange for a fixed amount of fungible tokens.
 
+Q: do we want it to be a `ERC20Permit`? (i.e. using ERC-2612)
+
 For example for Nouns, we expect the fungible $nouns token to have the exchange rate of 1M $nouns for each Noun NFT deposited or redeemed.
 
 ### `initialize`
