@@ -4,6 +4,8 @@
 
 A factory contract that allows anyone to deploy a new instance of an NFT-backed fungible token.
 
+The factory enables Nouns DAO to create its fungible token via a proposal, giving it maximal provenance. In addition, it makes this token design a public good anyone else can easily use.
+
 ### `deployToken`
 
 ```solidity=
@@ -13,7 +15,8 @@ function deployToken(
     string calldata name,
     string calldata symbol,
     uint8 decimals,
-    uint88 unitsPerNFT
+    uint88 unitsPerNFT,
+    uint8 nonce
 )
 ```
 
@@ -21,7 +24,7 @@ Creates a new ERC1967 upgradeable proxy contract, with its implementation set as
 
 Initializes the fungible token with the same parameters this deploy function accepts. See the token contract for more information.
 
-Contracts are deployed using the `CREATE` operation, such that token addresses are harder to predict than when using `CREATE2`.
+Contracts are deployed using the `CREATE2` operation, such that token addresses are predictable.
 
 ## `NFTBackedToken` contract
 
@@ -29,9 +32,11 @@ An upgradeable ERC20 token contract that supports depositing or redeeming ERC721
 
 For example for Nouns, we expect the fungible $nouns token to have the exchange rate of 1M $nouns for each Noun NFT deposited or redeemed.
 
+The token supports ERC20 Permits, aka EIP 2612.
+
 ### `initialize`
 
-```solidity=
+```solidity
 function initialize(
     address owner,
     string calldata name,
@@ -50,7 +55,8 @@ Configures a new instance of an NFT-based fungible token:
 - `symbol`: the symbol of the ERC20 token.
 - `decimals`: the number of digits after the decimal point, commonly set to 18.
 - `nft`: the address of the ERC721 token that is backing this ERC20 token.
-- `amountPerNFT`: how many tokens to mint/burn upon a deposit/redemption of a backing ERC721 token.
+- `amountPerNFT`: how many tokens to mint/burn upon a deposit/redemption of a backing ERC721 token; in `10^decimals` units.
+   - For example with 18 decimals and 1M per NFT, the value would be `1M * 10^18`.
 - `admin`: the address of the admin account that can pause/unpause in emergencies (more info below).
 
 ### `deposit`
@@ -123,6 +129,7 @@ Pauses or unpauses the `deposit` and `redeem` functions.
 Requirements:
 
 - `msg.sender` must be `admin`.
+   - In `unpause()` `msg.sender` can also be `owner`.
 - `admin` must not be burned, i.e. cannot equal the zero address.
 
 ### `burnAdminPower`
@@ -136,7 +143,19 @@ Sets `admin` to the zero address, disabling the admin power to pause or unpause.
 Requirements:
 
 - `msg.sender` must be `admin` or `owner`.
-- This contract must not be paused.
+
+### `balanceToBackingNFTCount`
+
+```solidity
+function balanceToBackingNFTCount(address account)
+```
+
+A view function that helps the DAO save a bit of gas when calculating `adjustedTotalSupply`.
+
+It calculates how many backing NFTs `account` would get if they were to redeem the maximum number of tokens they can given their current ERC20 balance. The calculation is: `balanceOf(account) / amountPerNFT()`.
+
+For example, say `amountPerNFT` is 1M tokens, and `account` has 2.9M tokens, this function's return value would be 2.
+
 
 ## `NounsDAOLogic` contract
 
@@ -149,18 +168,32 @@ The upgraded version will subtract from adjusted supply the amount of Noun NFTs 
 Current calculation:
 
 ```solidity
-nouns.totalSupply() - nouns.balanceOf(address(ds.timelock)) - forkEscrow.numTokensOwnedByDAO()
+nouns.totalSupply() - nouns.balanceOf(timelock) - forkEscrow.numTokensOwnedByDAO()
 ```
 
 Updated calculation:
 
 ```solidity
-nouns.totalSupply() - nouns.balanceOf(address(timelock)) - forkEscrow.numTokensOwnedByDAO() - (nounsFungibleToken.balanceOf(timelock) / nounsFungibleToken.amountPerNFT())
+nouns.totalSupply() - nouns.balanceOf(timelock) - forkEscrow.numTokensOwnedByDAO() - nounsFungibleToken.balanceToBackingNFTCount(timelock)
 ```
 
 ### `setErc20TokensToIncludeInFork`
 
 The upgraded version will revert if a proposal attempts to add the Nouns-backed ERC20 token address to the list of ERC20s that are sent to fork DAOs.
+
+### `setNounsERC20Token`
+
+```solidity
+function setNounsERC20Token(address tokenAddress)
+```
+
+This functions allows the DAO to set its fungible token address via a proposal. 
+
+Only once it is set will `adjustedTotalSupply` start taking into account the DAO's fungible token balance, and `setErc20TokensToIncludeInFork` will start protecting the DAO from including the fungible token in forking funds.
+
+Requirements:
+
+- `msg.sender` must be `timelock`.
 
 ## Bridging to L2
 
