@@ -23,9 +23,15 @@ Initializes the fungible token with the same parameters this deploy function acc
 
 Contracts are deployed using the `CREATE` operation, such that token addresses are harder to predict than when using `CREATE2`.
 
+Q: why is it important that the address is harder to predict? Maybe it's actually more important that the address _is_ predictable so that we can set this address in the DAO contract in the same proposal as deploying the token?
+
+Q: maybe mention that we plan the DAO to call this function via a proposal?
+
 ## `NFTBackedToken` contract
 
-An upgradeable ERC20 token contract that supports depositing or redeeming ERC721 tokens of a specific token, in exchange for a fixed amount of fungible tokens.
+A UUPS upgradeable ERC20 token contract that supports depositing or redeeming ERC721 tokens of a specific token, in exchange for a fixed amount of fungible tokens.
+
+Q: do we want it to be a `ERC20Permit`? (i.e. using ERC-2612)
 
 For example for Nouns, we expect the fungible $nouns token to have the exchange rate of 1M $nouns for each Noun NFT deposited or redeemed.
 
@@ -51,6 +57,7 @@ Configures a new instance of an NFT-based fungible token:
 - `decimals`: the number of digits after the decimal point, commonly set to 18.
 - `nft`: the address of the ERC721 token that is backing this ERC20 token.
 - `amountPerNFT`: how many tokens to mint/burn upon a deposit/redemption of a backing ERC721 token.
+  Q: maybe it's easier if `amountPerNFT` includes decimals?
 - `admin`: the address of the admin account that can pause/unpause in emergencies (more info below).
 
 ### `deposit`
@@ -61,7 +68,7 @@ function deposit(uint256[] calldata tokenIds, address to)
 
 Transfers all ERC721 tokens in the `tokenIds` list from `msg.sender` to this contract.
 
-Mints ERC20 tokens in the amount of `amountPerNFT * tokenIds.length`, increasing the balane of `to`.
+Mints ERC20 tokens in the amount of `amountPerNFT * tokenIds.length * 10^decimals`, increasing the balance of `to`.
 
 For example, if `amountPerNFT` is 1M and three NFTs are deposited, the `to` account receives 3M ERC20 tokens.
 
@@ -76,7 +83,7 @@ Requirements:
 function redeem(uint256[] calldata tokenIds, address to)
 ```
 
-Burns ERC20 tokens in the amount of `amountPerNFT * tokenIds.length`, decreasing the balane of `msg.sender`.
+Burns ERC20 tokens in the amount of `amountPerNFT * tokenIds.length * 10^decimals`, decreasing the balane of `msg.sender`.
 
 Transfers all ERC721 tokens in the `tokenIds` list from this contract to `to`.
 
@@ -122,7 +129,7 @@ Pauses or unpauses the `deposit` and `redeem` functions.
 
 Requirements:
 
-- `msg.sender` must be `admin`.
+- `msg.sender` must be `admin`. Q: shouldn't the DAO also be able to pause/unpause? or at least unpause? e.g. in case admin paused and then lost access.
 - `admin` must not be burned, i.e. cannot equal the zero address.
 
 ### `burnAdminPower`
@@ -136,7 +143,7 @@ Sets `admin` to the zero address, disabling the admin power to pause or unpause.
 Requirements:
 
 - `msg.sender` must be `admin` or `owner`.
-- This contract must not be paused.
+- This contract must not be paused. Q: why does the contract need to be unpaused for this function?
 
 ## `NounsDAOLogic` contract
 
@@ -157,6 +164,10 @@ Updated calculation:
 ```solidity
 nouns.totalSupply() - nouns.balanceOf(address(timelock)) - forkEscrow.numTokensOwnedByDAO() - (nounsFungibleToken.balanceOf(timelock) / nounsFungibleToken.amountPerNFT())
 ```
+
+Q: make sure the calculation above takes decimals into account ^
+
+Q: we need a admin function that sets `nounsFungibleToken`
 
 ### `setErc20TokensToIncludeInFork`
 
