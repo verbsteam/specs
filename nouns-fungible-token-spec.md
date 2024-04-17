@@ -8,7 +8,7 @@ The factory enables Nouns DAO to create its fungible token via a proposal, givin
 
 ### `deployToken`
 
-```solidity=
+```solidity
 function deployToken(
     address erc721Token,
     address owner,
@@ -91,6 +91,25 @@ Requirements:
 - All `tokenIds` must be owned by this contract.
 - `msg.sender` must have a sufficient balance of ERC20 tokens to burn.
 - This contract must not be paused.
+
+### `swap`
+
+```solidity
+function swap(uint256[] calldata tokensIn, uint256[] calldata tokensOut, address to)
+```
+
+Swaps `nft` tokens between `msg.sender` and this contract.
+
+An optimization over what could be done by depositing `tokensIn` for ERC20 tokens, and then redeeming `tokensOut`.
+
+Requirements:
+
+- `tokensIn.length` must be equal to `tokensOut.length`.
+- `tokensIn` must be owned by `msg.sender`.
+- `tokensOut` must be owned by this contract.
+- This contract must not be paused.
+
+
 
 ### `upgradeToAndCall`
 
